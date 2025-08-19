@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Data Insights</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-50%) translateX(-5px);
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .insight-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .insight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .insight-card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            border-bottom: 3px solid #4a90e2;
+            padding-bottom: 10px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 10px;
+            border-left: 4px solid #4a90e2;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4a90e2;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .summary-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .summary-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .trend-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .trend-up {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .trend-down {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .trend-stable {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .highlight-card {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+        }
+
+        .highlight-card h3 {
+            color: white;
+            border-bottom-color: rgba(255,255,255,0.3);
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+        }
+
+        .no-data h2 {
+            margin-bottom: 20px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .insights-grid {
+                grid-template-columns: 1fr;
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .back-btn {
+                position: static;
+                transform: none;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">← Back to Input</button>
+            <h1>Production Data Insights</h1>
+            <p>Analytics and trends for your production data</p>
+        </div>
+
+        <div id="insightsContent">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        let productionData = {};
+
+        function loadData() {
+            // Get data from URL parameter (when opened from input page)
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataParam = urlParams.get('data');
+            
+            if (dataParam) {
+                try {
+                    productionData = JSON.parse(decodeURIComponent(dataParam));
+                } catch (e) {
+                    console.error('Error parsing data:', e);
+                }
+            }
+            
+            // If no data, show no data message
+            if (Object.keys(productionData).length === 0) {
+                showNoData();
+                return;
+            }
+            
+            generateInsights();
+        }
+
+        function showNoData() {
+            document.getElementById('insightsContent').innerHTML = `
+                <div class="no-data">
+                    <h2>📊 No Data Available</h2>
+                    <p>Please go back and enter some production data to see insights.</p>
+                    <button class="back-btn" onclick="goBack()" style="margin-top: 20px;">
+                        Go to Data Input
+                    </button>
+                </div>
+            `;
+        }
+
+        function generateInsights() {
+            const dates = Object.keys(productionData).sort();
+            const insightsHTML = `
+                <div class="insights-grid">
+                    ${createSummaryCard()}
+                    ${createTrendCard(dates)}
+                    ${createEBOAnalysis(dates)}
+                    ${createSISAnalysis(dates)}
+                    ${createProductionMixCard(dates)}
+                    ${createDailyTrendsCard(dates)}
+                </div>
+            `;
+            
+            document.getElementById('insightsContent').innerHTML = insightsHTML;
+            
+            // Initialize charts after DOM is ready
+            setTimeout(() => {
+                initializeCharts(dates);
+            }, 100);
+        }
+
+        function createSummaryCard() {
+            const totals = calculateTotals();
+            
+            return `
+                <div class="insight-card highlight-card">
+                    <h3>📈 Production Summary</h3>
+                                            <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-value">${totals.totalProduction}</span>
+                                <div class="stat-label">Total Production</div>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${totals.eboTotal}</span>
+                                <div class="stat-label">EBO Total</div>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${totals.sisTotal}</span>
+                                <div class="stat-label">SIS Total</div>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${totals.avgDaily}</span>
+                                <div class="stat-label">Avg Daily</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        }
+
+        function createTrendCard(dates) {
+            return `
+                <div class="insight-card">
+                    <h3>📊 Daily Production Trends</h3>
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createEBOAnalysis(dates) {
+            const eboData = analyzeEBOData(dates);
+            
+            return `
+                <div class="insight-card">
+                    <h3>🏭 EBO Analysis</h3>
+                    <div class="chart-container">
+                        <canvas id="eboChart"></canvas>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value">${eboData.maxProducer.name}</span>
+                            <div class="stat-label">Top Producer</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${eboData.maxProducer.value}</span>
+                            <div class="stat-label">Production</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createSISAnalysis(dates) {
+            return `
+                <div class="insight-card">
+                    <h3>⚙️ SIS Analysis</h3>
+                    <div class="chart-container">
+                        <canvas id="sisChart"></canvas>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value">${calculateSISPOvsNonPO().poPercentage}%</span>
+                            <div class="stat-label">PO Orders</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${calculateSISPOvsNonPO().nonPoPercentage}%</span>
+                            <div class="stat-label">Non-PO Orders</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createProductionMixCard(dates) {
+            return `
+                <div class="insight-card">
+                    <h3>🎯 Production Mix</h3>
+                    <div class="chart-container">
+                        <canvas id="mixChart"></canvas>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createDailyTrendsCard(dates) {
+            const dailyData = calculateDailyTrends(dates);
+            
+            return `
+                <div class="insight-card">
+                    <h3>📅 Daily Performance</h3>
+                    <table class="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Total Production</th>
+                                <th>EBO</th>
+                                <th>SIS</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${dailyData.map(day => `
+                                <tr>
+                                    <td>${formatDate(day.date)}</td>
+                                    <td>${day.total}</td>
+                                    <td>${day.ebo}</td>
+                                    <td>${day.sis}</td>
+                                    <td>${getTrendIndicator(day.trend)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function calculateTotals() {
+            let totalProduction = 0;
+            let eboTotal = 0;
+            let sisTotal = 0;
+            let dayCount = 0;
+
+            Object.values(productionData).forEach(day => {
+                const ebo = (day.ebo_jj || 0) + (day.ebo_vm || 0) + (day.ebo_on || 0) + (day.ebo_sl || 0);
+                const sis = (day.sis_jj_po || 0) + (day.sis_jj_nonpo || 0) + (day.sis_vm_po || 0) + 
+                           (day.sis_vm_nonpo || 0) + (day.sis_on_po || 0) + (day.sis_on_nonpo || 0) + 
+                           (day.sis_sl_po || 0) + (day.sis_sl_nonpo || 0);
+                
+                const others = (day.sor || 0) + (day.distribution || 0) + (day.tdr || 0) + (day.scrap || 0);
+                const dayTotal = ebo + sis + others;
+                
+                totalProduction += dayTotal;
+                eboTotal += ebo;
+                sisTotal += sis;
+                if (dayTotal > 0) dayCount++;
+            });
+
+            return {
+                totalProduction: totalProduction.toFixed(0),
+                eboTotal: eboTotal.toFixed(0),
+                sisTotal: sisTotal.toFixed(0),
+                avgDaily: dayCount > 0 ? (totalProduction / dayCount).toFixed(0) : '0'
+            };
+        }
+
+        function analyzeEBOData(dates) {
+            const eboCategories = { jj: 0, vm: 0, on: 0, sl: 0 };
+            
+            dates.forEach(date => {
+                const day = productionData[date];
+                eboCategories.jj += day.ebo_jj || 0;
+                eboCategories.vm += day.ebo_vm || 0;
+                eboCategories.on += day.ebo_on || 0;
+                eboCategories.sl += day.ebo_sl || 0;
+            });
+
+            const maxProducer = Object.entries(eboCategories).reduce((max, [name, value]) => 
+                value > max.value ? { name: name.toUpperCase(), value } : max, 
+                { name: '', value: 0 }
+            );
+
+            return { eboCategories, maxProducer };
+        }
+
+        function calculateSISPOvsNonPO() {
+            let totalPO = 0;
+            let totalNonPO = 0;
+
+            Object.values(productionData).forEach(day => {
+                totalPO += (day.sis_jj_po || 0) + (day.sis_vm_po || 0) + (day.sis_on_po || 0) + (day.sis_sl_po || 0);
+                totalNonPO += (day.sis_jj_nonpo || 0) + (day.sis_vm_nonpo || 0) + (day.sis_on_nonpo || 0) + (day.sis_sl_nonpo || 0);
+            });
+
+            const total = totalPO + totalNonPO;
+            return {
+                poPercentage: total > 0 ? ((totalPO / total) * 100).toFixed(1) : '0',
+                nonPoPercentage: total > 0 ? ((totalNonPO / total) * 100).toFixed(1) : '0',
+                totalPO,
+                totalNonPO
+            };
+        }
+
+        function calculateDailyTrends(dates) {
+            const dailyData = [];
+            let previousTotal = 0;
+
+            dates.forEach((date, index) => {
+                const day = productionData[date];
+                const ebo = (day.ebo_jj || 0) + (day.ebo_vm || 0) + (day.ebo_on || 0) + (day.ebo_sl || 0);
+                const sis = (day.sis_jj_po || 0) + (day.sis_jj_nonpo || 0) + (day.sis_vm_po || 0) + 
+                           (day.sis_vm_nonpo || 0) + (day.sis_on_po || 0) + (day.sis_on_nonpo || 0) + 
+                           (day.sis_sl_po || 0) + (day.sis_sl_nonpo || 0);
+                const total = ebo + sis + (day.sor || 0) + (day.distribution || 0) + (day.tdr || 0) + (day.scrap || 0);
+                
+                let trend = 'stable';
+                if (index > 0) {
+                    if (total > previousTotal) trend = 'up';
+                    else if (total < previousTotal) trend = 'down';
+                }
+
+                dailyData.push({ date, total, ebo, sis, trend });
+                previousTotal = total;
+            });
+
+            return dailyData;
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-GB', { 
+                day: '2-digit', 
+                month: 'short' 
+            });
+        }
+
+        function getTrendIndicator(trend) {
+            const indicators = {
+                up: '<span class="trend-indicator trend-up">↗ Up</span>',
+                down: '<span class="trend-indicator trend-down">↘ Down</span>',
+                stable: '<span class="trend-indicator trend-stable">→ Stable</span>'
+            };
+            return indicators[trend] || '';
+        }
+
+        function initializeCharts(dates) {
+            // Daily Trend Chart
+            const dailyTrends = calculateDailyTrends(dates);
+            new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: dailyTrends.map(d => formatDate(d.date)),
+                    datasets: [
+                        {
+                            label: 'Total Production',
+                            data: dailyTrends.map(d => d.total),
+                            borderColor: '#4a90e2',
+                            backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'EBO',
+                            data: dailyTrends.map(d => d.ebo),
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            fill: false
+                        },
+                        {
+                            label: 'SIS',
+                            data: dailyTrends.map(d => d.sis),
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // EBO Chart
+            const eboData = analyzeEBOData(dates);
+            new Chart(document.getElementById('eboChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['JJ', 'VM', 'ON', 'SL'],
+                    datasets: [{
+                        data: [
+                            eboData.eboCategories.jj,
+                            eboData.eboCategories.vm,
+                            eboData.eboCategories.on,
+                            eboData.eboCategories.sl
+                        ],
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // SIS Chart
+            const sisData = calculateSISPOvsNonPO();
+            new Chart(document.getElementById('sisChart'), {
+                type: 'pie',
+                data: {
+                    labels: ['PO Orders', 'Non-PO Orders'],
+                    datasets: [{
+                        data: [sisData.totalPO, sisData.totalNonPO],
+                        backgroundColor: ['#28a745', '#ffc107']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Production Mix Chart
+            const totals = calculateTotals();
+            new Chart(document.getElementById('mixChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['EBO', 'SIS', 'Others'],
+                    datasets: [{
+                        label: 'Production Volume',
+                        data: [
+                            parseInt(totals.eboTotal),
+                            parseInt(totals.sisTotal),
+                            parseInt(totals.totalProduction) - parseInt(totals.eboTotal) - parseInt(totals.sisTotal)
+                        ],
+                        backgroundColor: ['#28a745', '#dc3545', '#6f42c1']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function goBack() {
+            // In a real deployment, this would navigate back to the input page
+            if (window.opener) {
+                window.close();
+            } else {
+                alert('Open this page from the input page to enable navigation.');
+            }
+        }
+
+        // Load data and initialize insights when page loads
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>
