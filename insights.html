@@ -235,53 +235,75 @@
     <script>
         let productionData = {};
 
-        function loadData() {
-            // Try multiple sources for data
+        async function loadData() {
+            let dataLoaded = false;
             let dataSource = '';
             
-            // 1. First try URL parameter (when opened from input page)
-            const urlParams = new URLSearchParams(window.location.search);
-            const dataParam = urlParams.get('data');
+            // 1. First try to load from GitHub (shared data)
+            try {
+                const response = await fetch('data/production-data.json');
+                if (response.ok) {
+                    productionData = await response.json();
+                    dataSource = 'GitHub repository (live shared data)';
+                    dataLoaded = true;
+                }
+            } catch (e) {
+                console.log('No GitHub data file found');
+            }
             
-            if (dataParam) {
-                try {
-                    productionData = JSON.parse(decodeURIComponent(dataParam));
-                    dataSource = 'URL parameter';
-                } catch (e) {
-                    console.error('Error parsing URL data:', e);
+            // 2. Try URL parameter (when opened from input page)
+            if (!dataLoaded) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const dataParam = urlParams.get('data');
+                
+                if (dataParam) {
+                    try {
+                        productionData = JSON.parse(decodeURIComponent(dataParam));
+                        dataSource = 'URL parameter';
+                        dataLoaded = true;
+                    } catch (e) {
+                        console.error('Error parsing URL data:', e);
+                    }
                 }
             }
             
-            // 2. If no URL data, try localStorage
-            if (Object.keys(productionData).length === 0) {
+            // 3. If no URL data, try localStorage
+            if (!dataLoaded) {
                 try {
                     const savedData = localStorage.getItem('productionData');
                     if (savedData) {
                         productionData = JSON.parse(savedData);
-                        dataSource = 'localStorage';
+                        dataSource = 'localStorage (local only)';
+                        dataLoaded = true;
                     }
                 } catch (e) {
                     console.error('Error loading from localStorage:', e);
                 }
             }
             
-            // 3. If still no data, try window object (same tab)
-            if (Object.keys(productionData).length === 0 && window.opener && window.opener.productionData) {
+            // 4. If still no data, try window object (same tab)
+            if (!dataLoaded && window.opener && window.opener.productionData) {
                 try {
                     productionData = window.opener.productionData;
                     dataSource = 'parent window';
+                    dataLoaded = true;
                 } catch (e) {
                     console.error('Error accessing parent window data:', e);
                 }
             }
             
             // If no data found, show no data message
-            if (Object.keys(productionData).length === 0) {
+            if (!dataLoaded || Object.keys(productionData).length === 0) {
                 showNoData();
                 return;
             }
             
             console.log(`Data loaded from: ${dataSource}`);
+            
+            // Add data source indicator to header
+            const header = document.querySelector('.header p');
+            header.innerHTML += `<br><small style="opacity: 0.8;">📊 Data source: ${dataSource}</small>`;
+            
             generateInsights();
         }
 
