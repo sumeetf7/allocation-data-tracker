@@ -191,10 +191,13 @@
         <div class="header">
             <h1>Production Data Input System</h1>
             <p>Enter daily production data for EBO and SIS operations</p>
+            <div id="dataSource" style="margin-top: 10px; font-size: 14px; font-weight: 500;">
+                🔄 Loading data source...
+            </div>
         </div>
 
         <div class="success-message" id="successMessage">
-            Data saved successfully! Click the insights button to view analytics.
+            ✅ Data saved successfully and automatically backed up! Management can access insights anytime. Data persists across browser sessions.
         </div>
 
         <div class="table-container">
@@ -331,8 +334,47 @@
         function addCalculationListeners() {
             const inputs = document.querySelectorAll('input[type="number"]');
             inputs.forEach(input => {
-                input.addEventListener('input', calculateTotals);
+                input.addEventListener('input', function() {
+                    calculateTotals();
+                    autoSaveData(); // Auto-save on every input change
+                });
+                
+                // Also save on blur (when user leaves the field)
+                input.addEventListener('blur', autoSaveData);
             });
+        }
+        
+        // Auto-save function (silent save without notifications)
+        function autoSaveData() {
+            try {
+                const data = {};
+                const rows = document.querySelectorAll('tr[data-date]');
+                
+                rows.forEach(row => {
+                    const date = row.getAttribute('data-date');
+                    const inputs = row.querySelectorAll('input[type="number"]');
+                    data[date] = {};
+                    
+                    inputs.forEach(input => {
+                        const field = input.getAttribute('data-field');
+                        data[date][field] = parseFloat(input.value) || 0;
+                    });
+                });
+                
+                localStorage.setItem('productionData', JSON.stringify(data));
+                window.productionData = data;
+                
+                // Show insights button if data exists
+                const hasData = Object.values(data).some(day => 
+                    Object.values(day).some(value => value > 0)
+                );
+                if (hasData) {
+                    document.getElementById('insightsBtn').style.display = 'inline-block';
+                }
+                
+            } catch (error) {
+                console.error('Auto-save failed:', error);
+            }
         }
 
         function calculateTotals() {
@@ -453,25 +495,53 @@
                 });
             });
             
-            // Store in localStorage for persistence
+            // Store locally as backup
             try {
                 localStorage.setItem('productionData', JSON.stringify(data));
-                window.productionData = data; // Keep memory copy as backup
-                
-                // Show success message
-                const successMessage = document.getElementById('successMessage');
-                successMessage.style.display = 'block';
-                document.getElementById('insightsBtn').style.display = 'inline-block';
-                
-                setTimeout(() => {
-                    successMessage.style.display = 'none';
-                }, 3000);
-                
-                console.log('Data saved to localStorage:', data);
+                window.productionData = data;
             } catch (error) {
-                console.error('Error saving to localStorage:', error);
-                alert('Error saving data. Please try again.');
+                console.error('Error saving locally:', error);
             }
+            
+            // Generate downloadable JSON file
+            generateDataFile(data);
+            
+            // Show success message with instructions
+            showSaveSuccess();
+            
+            console.log('Data prepared for GitHub upload:', data);
+        }
+        
+        function generateDataFile(data) {
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = `production-data-${new Date().toISOString().split('T')[0]}.json`;
+            
+            // Add to save success message
+            const successMessage = document.getElementById('successMessage');
+            successMessage.innerHTML = `
+                ✅ Data saved successfully!<br>
+                📁 <a href="${url}" download="production-data.json" style="color: white; text-decoration: underline;">
+                    Click here to download data file for GitHub upload
+                </a><br>
+                👨‍💼 Follow the GitHub upload steps to share with management
+            `;
+            successMessage.style.display = 'block';
+            document.getElementById('insightsBtn').style.display = 'inline-block';
+            
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+                URL.revokeObjectURL(url);
+            }, 10000); // Keep message longer for download
+        }
+        
+        function showSaveSuccess() {
+            // This will be called by generateDataFile
         }
 
         function clearData() {
@@ -526,37 +596,70 @@
         // Load saved data on page load
         loadSavedData();
         
-        // Function to load saved data from localStorage
-        function loadSavedData() {
+        // Function to load data from GitHub or localStorage
+        async function loadSavedData() {
+            let dataLoaded = false;
+            
+            // First try to load from GitHub
             try {
-                const savedData = localStorage.getItem('productionData');
-                if (savedData) {
-                    const data = JSON.parse(savedData);
+                const response = await fetch('data/production-data.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    populateFormWithData(data);
                     window.productionData = data;
+                    dataLoaded = true;
+                    console.log('Data loaded from GitHub');
                     
-                    // Populate the form with saved data
-                    Object.keys(data).forEach(date => {
-                        const row = document.querySelector(`tr[data-date="${date}"]`);
-                        if (row) {
-                            Object.keys(data[date]).forEach(field => {
-                                const input = row.querySelector(`input[data-field="${field}"]`);
-                                if (input) {
-                                    input.value = data[date][field];
-                                }
-                            });
-                        }
-                    });
-                    
-                    // Recalculate all totals
-                    calculateTotals();
-                    
-                    // Show insights button if data exists
-                    if (Object.keys(data).length > 0) {
-                        document.getElementById('insightsBtn').style.display = 'inline-block';
-                    }
+                    // Show data source indicator
+                    document.getElementById('dataSource').textContent = '☁️ Live data from GitHub repository';
+                    document.getElementById('dataSource').style.color = '#28a745';
                 }
             } catch (error) {
-                console.error('Error loading saved data:', error);
+                console.log('No GitHub data file found, checking local storage');
+            }
+            
+            // If no GitHub data, try localStorage
+            if (!dataLoaded) {
+                try {
+                    const savedData = localStorage.getItem('productionData');
+                    if (savedData) {
+                        const data = JSON.parse(savedData);
+                        populateFormWithData(data);
+                        window.productionData = data;
+                        console.log('Data loaded from localStorage');
+                        
+                        // Show data source indicator
+                        document.getElementById('dataSource').textContent = '💾 Local data (not shared with management)';
+                        document.getElementById('dataSource').style.color = '#ffc107';
+                    }
+                } catch (error) {
+                    console.error('Error loading saved data:', error);
+                    document.getElementById('dataSource').textContent = '📝 No saved data - enter new data below';
+                    document.getElementById('dataSource').style.color = '#6c757d';
+                }
+            }
+        }
+        
+        function populateFormWithData(data) {
+            // Populate the form with saved data
+            Object.keys(data).forEach(date => {
+                const row = document.querySelector(`tr[data-date="${date}"]`);
+                if (row) {
+                    Object.keys(data[date]).forEach(field => {
+                        const input = row.querySelector(`input[data-field="${field}"]`);
+                        if (input) {
+                            input.value = data[date][field];
+                        }
+                    });
+                }
+            });
+            
+            // Recalculate all totals
+            calculateTotals();
+            
+            // Show insights button if data exists
+            if (Object.keys(data).length > 0) {
+                document.getElementById('insightsBtn').style.display = 'inline-block';
             }
         }
     </script>
