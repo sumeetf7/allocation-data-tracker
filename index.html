@@ -373,33 +373,69 @@
                            'sis_sl_nonpo', 'sor', 'distribution', 'tdr', 'scrap'];
             
             fields.forEach(field => {
-                const inputs = document.querySelectorAll(`[data-field="${field}"] input`);
+                const inputs = document.querySelectorAll(`input[data-field="${field}"]`);
                 let total = 0;
-                inputs.forEach(input => total += parseFloat(input.value) || 0);
+                inputs.forEach(input => {
+                    const value = parseFloat(input.value) || 0;
+                    total += value;
+                });
                 const totalElement = document.getElementById(`total_${field}`);
-                if (totalElement) totalElement.textContent = total;
+                if (totalElement) {
+                    totalElement.textContent = total;
+                }
             });
             
-            // Calculate grand totals
-            const eboTotal = ['ebo_jj', 'ebo_vm', 'ebo_on', 'ebo_sl'].reduce((sum, field) => {
-                return sum + (parseFloat(document.getElementById(`total_${field}`).textContent) || 0);
-            }, 0);
-            document.getElementById('total_ebo_total').textContent = eboTotal;
+            // Calculate EBO grand total
+            let eboGrandTotal = 0;
+            ['ebo_jj', 'ebo_vm', 'ebo_on', 'ebo_sl'].forEach(field => {
+                const element = document.getElementById(`total_${field}`);
+                if (element) {
+                    eboGrandTotal += parseFloat(element.textContent) || 0;
+                }
+            });
+            const eboTotalElement = document.getElementById('total_ebo_total');
+            if (eboTotalElement) {
+                eboTotalElement.textContent = eboGrandTotal;
+            }
             
-            const sisPOTotal = ['sis_jj_po', 'sis_vm_po', 'sis_on_po', 'sis_sl_po'].reduce((sum, field) => {
-                return sum + (parseFloat(document.getElementById(`total_${field}`).textContent) || 0);
-            }, 0);
-            document.getElementById('total_sis_total_po').textContent = sisPOTotal;
+            // Calculate SIS PO total
+            let sisPOGrandTotal = 0;
+            ['sis_jj_po', 'sis_vm_po', 'sis_on_po', 'sis_sl_po'].forEach(field => {
+                const element = document.getElementById(`total_${field}`);
+                if (element) {
+                    sisPOGrandTotal += parseFloat(element.textContent) || 0;
+                }
+            });
+            const sisPOTotalElement = document.getElementById('total_sis_total_po');
+            if (sisPOTotalElement) {
+                sisPOTotalElement.textContent = sisPOGrandTotal;
+            }
             
-            const sisNonPOTotal = ['sis_jj_nonpo', 'sis_vm_nonpo', 'sis_on_nonpo', 'sis_sl_nonpo'].reduce((sum, field) => {
-                return sum + (parseFloat(document.getElementById(`total_${field}`).textContent) || 0);
-            }, 0);
-            document.getElementById('total_sis_total_nonpo').textContent = sisNonPOTotal;
+            // Calculate SIS Non-PO total
+            let sisNonPOGrandTotal = 0;
+            ['sis_jj_nonpo', 'sis_vm_nonpo', 'sis_on_nonpo', 'sis_sl_nonpo'].forEach(field => {
+                const element = document.getElementById(`total_${field}`);
+                if (element) {
+                    sisNonPOGrandTotal += parseFloat(element.textContent) || 0;
+                }
+            });
+            const sisNonPOTotalElement = document.getElementById('total_sis_total_nonpo');
+            if (sisNonPOTotalElement) {
+                sisNonPOTotalElement.textContent = sisNonPOGrandTotal;
+            }
             
-            const grandTotal = fields.reduce((sum, field) => {
-                return sum + (parseFloat(document.getElementById(`total_${field}`).textContent) || 0);
-            }, 0);
-            document.getElementById('total_total').textContent = grandTotal;
+            // Calculate final grand total
+            let finalGrandTotal = 0;
+            fields.forEach(field => {
+                const element = document.getElementById(`total_${field}`);
+                if (element) {
+                    finalGrandTotal += parseFloat(element.textContent) || 0;
+                }
+            });
+            const grandTotalElement = document.getElementById('total_total');
+            if (grandTotalElement) {
+                grandTotalElement.textContent = finalGrandTotal;
+            }
         }
 
         function saveData() {
@@ -418,41 +454,111 @@
             });
             
             // Store in localStorage for persistence
-localStorage.setItem('productionData', JSON.stringify(data));
-            
-            // Show success message
-            const successMessage = document.getElementById('successMessage');
-            successMessage.style.display = 'block';
-            document.getElementById('insightsBtn').style.display = 'inline-block';
-            
-            setTimeout(() => {
-                successMessage.style.display = 'none';
-            }, 3000);
-            
-            console.log('Data saved:', data);
+            try {
+                localStorage.setItem('productionData', JSON.stringify(data));
+                window.productionData = data; // Keep memory copy as backup
+                
+                // Show success message
+                const successMessage = document.getElementById('successMessage');
+                successMessage.style.display = 'block';
+                document.getElementById('insightsBtn').style.display = 'inline-block';
+                
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 3000);
+                
+                console.log('Data saved to localStorage:', data);
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+                alert('Error saving data. Please try again.');
+            }
         }
 
         function clearData() {
-            if (confirm('Are you sure you want to clear all data?')) {
+            if (confirm('Are you sure you want to clear all data? This will permanently delete all saved information.')) {
                 const inputs = document.querySelectorAll('input[type="number"]');
                 inputs.forEach(input => input.value = '');
                 calculateTotals();
                 document.getElementById('insightsBtn').style.display = 'none';
+                
+                // Clear localStorage
+                try {
+                    localStorage.removeItem('productionData');
+                } catch (error) {
+                    console.error('Error clearing localStorage:', error);
+                }
                 delete window.productionData;
+                
+                alert('All data cleared successfully.');
             }
         }
 
         function viewInsights() {
-    const data = localStorage.getItem('productionData');
-    if (data) {
-        const insightsWindow = window.open('insights.html?data=' + encodeURIComponent(data), '_blank');
-    } else {
-        alert('Please save data first!');
-    }
-}
+            // Try to get data from localStorage first, then memory
+            let data = null;
+            try {
+                const storedData = localStorage.getItem('productionData');
+                if (storedData) {
+                    data = JSON.parse(storedData);
+                } else if (window.productionData) {
+                    data = window.productionData;
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                data = window.productionData;
+            }
+            
+            if (data && Object.keys(data).length > 0) {
+                // Open insights page with data
+                const dataParam = encodeURIComponent(JSON.stringify(data));
+                const insightsWindow = window.open(`insights.html?data=${dataParam}`, '_blank');
+                if (!insightsWindow) {
+                    alert('Pop-up blocked. Please allow pop-ups for this site or manually open insights.html');
+                }
+            } else {
+                alert('Please save data first!');
+            }
+        }
 
         // Initialize the table
         generateDateRows();
+        
+        // Load saved data on page load
+        loadSavedData();
+        
+        // Function to load saved data from localStorage
+        function loadSavedData() {
+            try {
+                const savedData = localStorage.getItem('productionData');
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    window.productionData = data;
+                    
+                    // Populate the form with saved data
+                    Object.keys(data).forEach(date => {
+                        const row = document.querySelector(`tr[data-date="${date}"]`);
+                        if (row) {
+                            Object.keys(data[date]).forEach(field => {
+                                const input = row.querySelector(`input[data-field="${field}"]`);
+                                if (input) {
+                                    input.value = data[date][field];
+                                }
+                            });
+                        }
+                    });
+                    
+                    // Recalculate all totals
+                    calculateTotals();
+                    
+                    // Show insights button if data exists
+                    if (Object.keys(data).length > 0) {
+                        document.getElementById('insightsBtn').style.display = 'inline-block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading saved data:', error);
+            }
+        }
     </script>
 </body>
 </html>
