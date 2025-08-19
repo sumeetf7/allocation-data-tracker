@@ -417,8 +417,8 @@
                 });
             });
             
-            // Store in memory (replace with localStorage when deploying)
-            window.productionData = data;
+            // Store in localStorage for persistence
+localStorage.setItem('productionData', JSON.stringify(data));
             
             // Show success message
             const successMessage = document.getElementById('successMessage');
