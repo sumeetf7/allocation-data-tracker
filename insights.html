@@ -236,24 +236,52 @@
         let productionData = {};
 
         function loadData() {
-            // Get data from URL parameter (when opened from input page)
+            // Try multiple sources for data
+            let dataSource = '';
+            
+            // 1. First try URL parameter (when opened from input page)
             const urlParams = new URLSearchParams(window.location.search);
             const dataParam = urlParams.get('data');
             
             if (dataParam) {
                 try {
                     productionData = JSON.parse(decodeURIComponent(dataParam));
+                    dataSource = 'URL parameter';
                 } catch (e) {
-                    console.error('Error parsing data:', e);
+                    console.error('Error parsing URL data:', e);
                 }
             }
             
-            // If no data, show no data message
+            // 2. If no URL data, try localStorage
+            if (Object.keys(productionData).length === 0) {
+                try {
+                    const savedData = localStorage.getItem('productionData');
+                    if (savedData) {
+                        productionData = JSON.parse(savedData);
+                        dataSource = 'localStorage';
+                    }
+                } catch (e) {
+                    console.error('Error loading from localStorage:', e);
+                }
+            }
+            
+            // 3. If still no data, try window object (same tab)
+            if (Object.keys(productionData).length === 0 && window.opener && window.opener.productionData) {
+                try {
+                    productionData = window.opener.productionData;
+                    dataSource = 'parent window';
+                } catch (e) {
+                    console.error('Error accessing parent window data:', e);
+                }
+            }
+            
+            // If no data found, show no data message
             if (Object.keys(productionData).length === 0) {
                 showNoData();
                 return;
             }
             
+            console.log(`Data loaded from: ${dataSource}`);
             generateInsights();
         }
 
