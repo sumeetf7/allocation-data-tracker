@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Data Input</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        th {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .main-header {
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .sub-header {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+            font-size: 12px;
+        }
+
+        .date-cell {
+            background: #f8f9fa;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+            transform: scale(1.05);
+        }
+
+        input[type="number"]:hover {
+            border-color: #6c757d;
+        }
+
+        .ebo-section { border-left: 4px solid #28a745; }
+        .sis-section { border-left: 4px solid #dc3545; }
+        .other-section { border-left: 4px solid #6f42c1; }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            padding: 0 30px 30px;
+        }
+
+        button {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            padding: 15px;
+            margin: 20px 30px;
+            border-radius: 10px;
+            border-left: 4px solid #28a745;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .table-container { padding: 15px; }
+            input[type="number"] { width: 60px; }
+            .action-buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Production Data Input System</h1>
+            <p>Enter daily production data for EBO and SIS operations</p>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            Data saved successfully! Click the insights button to view analytics.
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="3" class="main-header">Allocation<br>Date</th>
+                        <th colspan="5" class="main-header ebo-section">EBO</th>
+                        <th colspan="10" class="main-header sis-section">SIS</th>
+                        <th rowspan="3" class="main-header other-section">SOR</th>
+                        <th rowspan="3" class="main-header other-section">Distribution</th>
+                        <th rowspan="3" class="main-header other-section">TDR</th>
+                        <th rowspan="3" class="main-header other-section">Scrap</th>
+                        <th rowspan="3" class="main-header other-section">Total</th>
+                    </tr>
+                    <tr>
+                        <th class="sub-header ebo-section">JJ</th>
+                        <th class="sub-header ebo-section">VM</th>
+                        <th class="sub-header ebo-section">ON</th>
+                        <th class="sub-header ebo-section">SL</th>
+                        <th class="sub-header ebo-section">Total</th>
+                        <th colspan="2" class="sub-header sis-section">JJ</th>
+                        <th colspan="2" class="sub-header sis-section">VM</th>
+                        <th colspan="2" class="sub-header sis-section">ON</th>
+                        <th colspan="2" class="sub-header sis-section">SL</th>
+                        <th colspan="2" class="sub-header sis-section">Total</th>
+                    </tr>
+                    <tr>
+                        <th class="sub-header ebo-section"></th>
+                        <th class="sub-header ebo-section"></th>
+                        <th class="sub-header ebo-section"></th>
+                        <th class="sub-header ebo-section"></th>
+                        <th class="sub-header ebo-section"></th>
+                        <th class="sub-header sis-section">PO</th>
+                        <th class="sub-header sis-section">Non-PO</th>
+                        <th class="sub-header sis-section">PO</th>
+                        <th class="sub-header sis-section">Non-PO</th>
+                        <th class="sub-header sis-section">PO</th>
+                        <th class="sub-header sis-section">Non-PO</th>
+                        <th class="sub-header sis-section">PO</th>
+                        <th class="sub-header sis-section">Non-PO</th>
+                        <th class="sub-header sis-section">PO</th>
+                        <th class="sub-header sis-section">Non-PO</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    <!-- Rows will be generated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-buttons">
+            <button class="save-btn" onclick="saveData()">💾 Save Data</button>
+            <button class="clear-btn" onclick="clearData()">🗑️ Clear All</button>
+            <button class="save-btn" onclick="viewInsights()" id="insightsBtn" style="display:none;">📊 View Insights</button>
+        </div>
+    </div>
+
+    <script>
+        // Generate date rows for the current month
+        function generateDateRows() {
+            const tableBody = document.getElementById('dataTable');
+            const startDate = new Date('2024-08-10');
+            const endDate = new Date('2024-08-19');
+            
+            let html = '';
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+                const dateId = d.toISOString().split('T')[0];
+                
+                html += `
+                    <tr data-date="${dateId}">
+                        <td class="date-cell">${dateStr}</td>
+                        <!-- EBO Section -->
+                        <td><input type="number" min="0" data-field="ebo_jj" /></td>
+                        <td><input type="number" min="0" data-field="ebo_vm" /></td>
+                        <td><input type="number" min="0" data-field="ebo_on" /></td>
+                        <td><input type="number" min="0" data-field="ebo_sl" /></td>
+                        <td class="calculated" data-field="ebo_total">0</td>
+                        <!-- SIS Section -->
+                        <td><input type="number" min="0" data-field="sis_jj_po" /></td>
+                        <td><input type="number" min="0" data-field="sis_jj_nonpo" /></td>
+                        <td><input type="number" min="0" data-field="sis_vm_po" /></td>
+                        <td><input type="number" min="0" data-field="sis_vm_nonpo" /></td>
+                        <td><input type="number" min="0" data-field="sis_on_po" /></td>
+                        <td><input type="number" min="0" data-field="sis_on_nonpo" /></td>
+                        <td><input type="number" min="0" data-field="sis_sl_po" /></td>
+                        <td><input type="number" min="0" data-field="sis_sl_nonpo" /></td>
+                        <td class="calculated" data-field="sis_total_po">0</td>
+                        <td class="calculated" data-field="sis_total_nonpo">0</td>
+                        <!-- Other fields -->
+                        <td><input type="number" min="0" data-field="sor" /></td>
+                        <td><input type="number" min="0" data-field="distribution" /></td>
+                        <td><input type="number" min="0" data-field="tdr" /></td>
+                        <td><input type="number" min="0" data-field="scrap" /></td>
+                        <td class="calculated" data-field="total">0</td>
+                    </tr>
+                `;
+            }
+            
+            // Add total row
+            html += `
+                <tr style="background: #f8f9fa; font-weight: bold;">
+                    <td class="date-cell">Total</td>
+                    <td class="calculated" id="total_ebo_jj">0</td>
+                    <td class="calculated" id="total_ebo_vm">0</td>
+                    <td class="calculated" id="total_ebo_on">0</td>
+                    <td class="calculated" id="total_ebo_sl">0</td>
+                    <td class="calculated" id="total_ebo_total">0</td>
+                    <td class="calculated" id="total_sis_jj_po">0</td>
+                    <td class="calculated" id="total_sis_jj_nonpo">0</td>
+                    <td class="calculated" id="total_sis_vm_po">0</td>
+                    <td class="calculated" id="total_sis_vm_nonpo">0</td>
+                    <td class="calculated" id="total_sis_on_po">0</td>
+                    <td class="calculated" id="total_sis_on_nonpo">0</td>
+                    <td class="calculated" id="total_sis_sl_po">0</td>
+                    <td class="calculated" id="total_sis_sl_nonpo">0</td>
+                    <td class="calculated" id="total_sis_total_po">0</td>
+                    <td class="calculated" id="total_sis_total_nonpo">0</td>
+                    <td class="calculated" id="total_sor">0</td>
+                    <td class="calculated" id="total_distribution">0</td>
+                    <td class="calculated" id="total_tdr">0</td>
+                    <td class="calculated" id="total_scrap">0</td>
+                    <td class="calculated" id="total_total">0</td>
+                </tr>
+            `;
+            
+            tableBody.innerHTML = html;
+            
+            // Add event listeners for calculations
+            addCalculationListeners();
+        }
+
+        function addCalculationListeners() {
+            const inputs = document.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                input.addEventListener('input', calculateTotals);
+            });
+        }
+
+        function calculateTotals() {
+            const rows = document.querySelectorAll('tr[data-date]');
+            
+            rows.forEach(row => {
+                // Calculate EBO total
+                const eboInputs = row.querySelectorAll('[data-field^="ebo_"]:not([data-field="ebo_total"]) input');
+                let eboTotal = 0;
+                eboInputs.forEach(input => eboTotal += parseFloat(input.value) || 0);
+                row.querySelector('[data-field="ebo_total"]').textContent = eboTotal;
+                
+                // Calculate SIS totals
+                const sisPOInputs = row.querySelectorAll('[data-field$="_po"] input');
+                const sisNonPOInputs = row.querySelectorAll('[data-field$="_nonpo"] input');
+                
+                let sisPOTotal = 0, sisNonPOTotal = 0;
+                sisPOInputs.forEach(input => sisPOTotal += parseFloat(input.value) || 0);
+                sisNonPOInputs.forEach(input => sisNonPOTotal += parseFloat(input.value) || 0);
+                
+                row.querySelector('[data-field="sis_total_po"]').textContent = sisPOTotal;
+                row.querySelector('[data-field="sis_total_nonpo"]').textContent = sisNonPOTotal;
+                
+                // Calculate row total
+                const allInputs = row.querySelectorAll('input[type="number"]');
+                let rowTotal = 0;
+                allInputs.forEach(input => rowTotal += parseFloat(input.value) || 0);
+                row.querySelector('[data-field="total"]').textContent = rowTotal;
+            });
+            
+            // Calculate column totals
+            calculateColumnTotals();
+        }
+
+        function calculateColumnTotals() {
+            const fields = ['ebo_jj', 'ebo_vm', 'ebo_on', 'ebo_sl', 'sis_jj_po', 'sis_jj_nonpo', 
+                           'sis_vm_po', 'sis_vm_nonpo', 'sis_on_po', 'sis_on_nonpo', 'sis_sl_po', 
+                           'sis_sl_nonpo', 'sor', 'distribution', 'tdr', 'scrap'];
+            
+            fields.forEach(field => {
+                const inputs = document.querySelectorAll(`[data-field="${field}"] input`);
+                let total = 0;
+                inputs.forEach(input => total += parseFloat(input.value) || 0);
+                const totalElement = document.getElementById(`total_${field}`);
+                if (totalElement) totalElement.textContent = total;
+            });
+            
+            // Calculate grand totals
+            const eboTotal = ['ebo_jj', 'ebo_vm', 'ebo_on', 'ebo_sl'].reduce((sum, field) => {
+                return sum + (parseFloat(document.getElementById(`total_${field}`).textContent) || 0);
+            }, 0);
+            document.getElementById('total_ebo_total').textContent = eboTotal;
+            
+            const sisPOTotal = ['sis_jj_po', 'sis_vm_po', 'sis_on_po', 'sis_sl_po'].reduce((sum, field) => {
+                return sum + (parseFloat(document.getElementById(`total_${field}`).textContent) || 0);
+            }, 0);
+            document.getElementById('total_sis_total_po').textContent = sisPOTotal;
+            
+            const sisNonPOTotal = ['sis_jj_nonpo', 'sis_vm_nonpo', 'sis_on_nonpo', 'sis_sl_nonpo'].reduce((sum, field) => {
+                return sum + (parseFloat(document.getElementById(`total_${field}`).textContent) || 0);
+            }, 0);
+            document.getElementById('total_sis_total_nonpo').textContent = sisNonPOTotal;
+            
+            const grandTotal = fields.reduce((sum, field) => {
+                return sum + (parseFloat(document.getElementById(`total_${field}`).textContent) || 0);
+            }, 0);
+            document.getElementById('total_total').textContent = grandTotal;
+        }
+
+        function saveData() {
+            const data = {};
+            const rows = document.querySelectorAll('tr[data-date]');
+            
+            rows.forEach(row => {
+                const date = row.getAttribute('data-date');
+                const inputs = row.querySelectorAll('input[type="number"]');
+                data[date] = {};
+                
+                inputs.forEach(input => {
+                    const field = input.getAttribute('data-field');
+                    data[date][field] = parseFloat(input.value) || 0;
+                });
+            });
+            
+            // Store in memory (replace with localStorage when deploying)
+            window.productionData = data;
+            
+            // Show success message
+            const successMessage = document.getElementById('successMessage');
+            successMessage.style.display = 'block';
+            document.getElementById('insightsBtn').style.display = 'inline-block';
+            
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+            }, 3000);
+            
+            console.log('Data saved:', data);
+        }
+
+        function clearData() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                const inputs = document.querySelectorAll('input[type="number"]');
+                inputs.forEach(input => input.value = '');
+                calculateTotals();
+                document.getElementById('insightsBtn').style.display = 'none';
+                delete window.productionData;
+            }
+        }
+
+        function viewInsights() {
+            if (window.productionData) {
+                // Open insights page with data
+                const insightsWindow = window.open('', '_blank');
+                const data = encodeURIComponent(JSON.stringify(window.productionData));
+                insightsWindow.location.href = `insights.html?data=${data}`;
+            } else {
+                alert('Please save data first!');
+            }
+        }
+
+        // Initialize the table
+        generateDateRows();
+    </script>
+</body>
+</html>
