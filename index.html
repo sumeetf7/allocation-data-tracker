@@ -443,15 +443,13 @@ localStorage.setItem('productionData', JSON.stringify(data));
         }
 
         function viewInsights() {
-            if (window.productionData) {
-                // Open insights page with data
-                const insightsWindow = window.open('', '_blank');
-                const data = encodeURIComponent(JSON.stringify(window.productionData));
-                insightsWindow.location.href = `insights.html?data=${data}`;
-            } else {
-                alert('Please save data first!');
-            }
-        }
+    const data = localStorage.getItem('productionData');
+    if (data) {
+        const insightsWindow = window.open('insights.html?data=' + encodeURIComponent(data), '_blank');
+    } else {
+        alert('Please save data first!');
+    }
+}
 
         // Initialize the table
         generateDateRows();
